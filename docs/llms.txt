@@ -10,6 +10,7 @@
 - Download: https://github.com/YUNG12BIGBOY/cue/releases/latest/download/cue-win-x64.exe
 - Source: https://github.com/YUNG12BIGBOY/cue
 - Landing page: https://yung12bigboy.github.io/cue/
+- Press kit: https://yung12bigboy.github.io/cue/press.html
 - Windows build notes: https://github.com/YUNG12BIGBOY/cue/blob/main/WINDOWS.md
 
 ## What it does
