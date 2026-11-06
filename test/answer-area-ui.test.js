@@ -156,16 +156,19 @@ function boot() {
     publikActionButton: () => null,
     Date
   });
-  vm.runInContext(`let aiEl = null, caretEl = null, busy = false, responseCount = 0; const MAX_RESPONSES = 20;\n${answerCode()}`, ctx);
-  const flush = () => { for (let i = 0; i < 10 && frames.length; i++) { const f = frames; frames = []; f.forEach((fn) => fn()); } };
+  vm.runInContext(`let aiEl = null, caretEl = null, busy = false, responseCount = 0, suppressAnswers = false; const MAX_RESPONSES = 20;\n${answerCode()}`, ctx);
+  const flush = (maxFrames = 10) => { for (let i = 0; i < maxFrames && frames.length; i++) { const f = frames; frames = []; f.forEach((fn) => fn()); } };
   const fire = (ch, payload = {}) => handlers[ch](payload);
+  const setSpeed = (value) => vm.runInContext(`autoScrollSpeed = ${JSON.stringify(value)}`, ctx);
+  // The older follow tests predate the speeds and expect the original jump.
+  setSpeed('instant');
   const m = dom.messages;
   const hiddenBelow = () => m.scrollHeight - m.scrollTop - m.clientHeight;
   // An earlier answer, so the area already scrolls.
   fire('llm:start', { userBubble: 'What does a payment gateway do?' });
   for (let i = 0; i < 60; i++) fire('llm:token', { text: 'It moves card data. ' });
   fire('llm:done'); flush();
-  return { fire, flush, m, hiddenBelow };
+  return { fire, flush, m, hiddenBelow, setSpeed };
 }
 
 const words = (n) => Array.from({ length: n }, (_, i) => `word${i} `);
@@ -247,4 +250,45 @@ test('a small scroll that stays within 40 px of the end keeps the follow, and cu
   assert.equal(hiddenBelow(), 0, 'still following after a 30 px nudge');
   fire('llm:done'); flush();
   assert.equal(hiddenBelow(), 0);
+});
+
+test('slow auto-scroll glides frame by frame and still catches up', () => {
+  const { fire, flush, m, hiddenBelow, setSpeed } = boot();
+  setSpeed('slow');
+  fire('llm:start', { userBubble: 'Tell me about a long project.' });
+  flush(); // starting a new answer snaps to its first line
+  const startTop = m.scrollTop;
+  for (const t of words(120)) fire('llm:token', { text: t });
+  flush(1); // one 16 ms frame
+  assert.ok(m.scrollTop > startTop, 'the first frame moves toward the answer');
+  assert.ok(hiddenBelow() > 0, 'one frame does not jump to the end');
+  flush(5000);
+  assert.equal(hiddenBelow(), 0, 'slow still reaches the end while the answer is open');
+});
+
+test('Off never moves the conversation on its own', () => {
+  const { fire, flush, m, setSpeed } = boot();
+  setSpeed('off');
+  const before = m.scrollTop;
+  fire('llm:start', { userBubble: 'Another question.' });
+  for (const t of words(200)) fire('llm:token', { text: t });
+  flush(500);
+  assert.equal(m.scrollTop, before);
+});
+
+test('faster levels cover more distance in the same frame', () => {
+  const oneFrame = (speed) => {
+    const { fire, flush, m, setSpeed } = boot();
+    setSpeed(speed);
+    fire('llm:start', { userBubble: 'Tell me about a long project.' });
+    flush();
+    const before = m.scrollTop;
+    for (const t of words(200)) fire('llm:token', { text: t });
+    flush(1);
+    return m.scrollTop - before;
+  };
+  const slow = oneFrame('slow');
+  const fast = oneFrame('fast');
+  assert.ok(slow > 0, 'slow moves');
+  assert.ok(fast > slow * 2, `fast (${fast}px) should be much quicker than slow (${slow}px)`);
 });

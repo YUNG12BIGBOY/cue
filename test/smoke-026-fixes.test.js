@@ -190,7 +190,8 @@ async function closeSettingsWith({ settings, publikState, typed = {}, atOpen }) 
   const ctx = vm.createContext({
     $: el, settings, publikState, keysAtOpen: atOpen || { ...settings.apiKeys },
     cue: { settingsSet: async (s) => { saved = JSON.parse(JSON.stringify(s)); return s; } },
-    clampOpacity: (x) => x, statusText: () => '', updateSmartTooltip: () => {}, Number
+    clampOpacity: (x) => x, clampChatSize: (x) => x, clampChatWeight: (x) => x,
+    statusText: () => '', updateSmartTooltip: () => {}, Number
   });
   vm.runInContext(`${fnSource('saveSettings')}\nthis.run = saveSettings;`, ctx);
   assert.equal(await ctx.run(), true);

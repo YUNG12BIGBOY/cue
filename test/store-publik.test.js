@@ -145,6 +145,41 @@ test('opacity is persisted and clamped so the window cannot disappear', () => {
   assert.equal(store.getSettings().opacity, 0.73);
 });
 
+test('auto-scroll speed accepts only the offered levels', () => {
+  const { store } = loadStore();
+  assert.equal(store.getSettings().autoScrollSpeed, 'normal');
+  for (const value of store.AUTO_SCROLL_SPEEDS) {
+    assert.equal(store.clampAutoScrollSpeed(value), value);
+  }
+  assert.equal(store.clampAutoScrollSpeed('warp'), 'normal');
+  assert.equal(store.clampAutoScrollSpeed(undefined), 'normal');
+  store.setSettings({ autoScrollSpeed: 'fast' });
+  assert.equal(store.getSettings().autoScrollSpeed, 'fast');
+  store.setSettings({ autoScrollSpeed: 'nonsense' });
+  assert.equal(store.getSettings().autoScrollSpeed, 'normal');
+});
+
+test('chat text size and boldness persist and are clamped to a readable range', () => {
+  const { store } = loadStore();
+  assert.equal(store.getSettings().chatTextSize, 100);
+  assert.equal(store.getSettings().chatTextWeight, 400);
+  assert.equal(store.clampChatTextSize(120), 120);
+  assert.equal(store.clampChatTextSize(0), 70);
+  assert.equal(store.clampChatTextSize(999), 180);
+  assert.equal(store.clampChatTextSize('nope'), 100);
+  assert.equal(store.clampChatTextWeight(700), 700);
+  assert.equal(store.clampChatTextWeight(0), 200);
+  assert.equal(store.clampChatTextWeight(999), 900);
+  assert.equal(store.clampChatTextWeight(650), 700, 'snaps to a real font weight');
+  assert.equal(store.clampChatTextWeight('nope'), 400);
+  store.setSettings({ chatTextSize: 5, chatTextWeight: 9999 });
+  assert.equal(store.getSettings().chatTextSize, 70);
+  assert.equal(store.getSettings().chatTextWeight, 900);
+  store.setSettings({ chatTextSize: 125, chatTextWeight: 600 });
+  assert.equal(store.getSettings().chatTextSize, 125);
+  assert.equal(store.getSettings().chatTextWeight, 600);
+});
+
 test('slide-caption app-link consent is tracked per caller, separately from the read/action scope grants', () => {
   const { store, read } = loadStore();
   assert.equal(store.getSlidesConsent('com.publikhq.iris'), undefined);

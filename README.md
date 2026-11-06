@@ -2,6 +2,12 @@
 
 # cue
 
+> **Local Windows fork.** This copy removes upstream's process masquerading
+> (renaming Electron to `MicrosoftEdgeUpdate.exe`, copying Microsoft's icon and
+> forging Microsoft PE metadata). It builds as an honest `cue.exe` with its own
+> icon and normal Task Manager entry. See [WINDOWS.md](WINDOWS.md) for the
+> changes, build steps and output paths.
+
 **An open-source AI copilot that floats over your screen — sees what you see, hears your meetings, and stays hidden from screen shares.**
 
 A free, self-hosted alternative to Cluely. Bring your own AI key (OpenAI · Anthropic · Google Gemini · Azure AI Foundry . OpenAI-compatible endpoints).
@@ -144,7 +150,9 @@ cue uses **your own** API key, so it's free to run (you only pay your AI provide
 | **Anthropic (Claude)** | [console.anthropic.com](https://console.anthropic.com) | Great for screen & coding help. Claude has no speech-to-text, so add an OpenAI or Gemini key too if you want the listening features. |
 | **Google Gemini** | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | One key does chat + transcription. |
 | **Azure AI Foundry** | [ai.azure.com](https://ai.azure.com) | Paste your **endpoint** plus your key in Settings. **Azure OpenAI:** `https://&lt;resource&gt;.openai.azure.com/openai` — **AI Foundry:** `https://&lt;host&gt;.cognitiveservices.azure.com` (cue appends `/openai/v1` itself). The **model** fields are your deployment names. No speech-to-text — add an OpenAI or Gemini key for listening. |
-| **DeepSeek** | [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) | OpenAI-compatible chat API. No speech-to-text — add an OpenAI or Gemini key too if you want the listening features. |
+| **DeepSeek** | [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) | OpenAI-compatible chat API. No speech-to-text - add an OpenAI or Gemini key too if you want the listening features. |
+| **OpenRouter** | [openrouter.ai/keys](https://openrouter.ai/keys) | One key for 400+ models at `https://openrouter.ai/api/v1`; defaults are `google/gemini-3.8-flash` (fast) and `anthropic/claude-sonnet-5.5` (smart), both vision-capable. No speech-to-text. |
+| **Dahl** | [inference.dahl.global](https://inference.dahl.global/) | OpenAI-compatible chat at `https://inference.dahl.global/v1` with open models (GLM 5.3 Flash, DeepSeek V4 Flash, MiniMax M2.7). **Text only** - no screenshots and no speech-to-text; the app refuses screenshots rather than failing upstream. |
 | **Groq** | [console.groq.com](https://console.groq.com) | Fast OpenAI-compatible chat. Groq Whisper can also handle transcription if you pick Groq on the Audio tab. |
 | **Custom** | Your endpoint or gateway | Any OpenAI-compatible Chat Completions endpoint. The API key is optional for unauthenticated local servers. |
 

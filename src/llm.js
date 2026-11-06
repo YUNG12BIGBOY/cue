@@ -41,9 +41,22 @@ const DEFAULT_MODELS = {
   // (thinking), so those are the defaults used everywhere in this file.
   deepseek: 'deepseek-flash',
   azure: 'gpt-4o-mini',
+  // Dahl's live catalog (2026-11-06): GLM 5.3 Flash is the fast general model,
+  // DeepSeek V4 Flash the 400K-context reasoning model. Both keep their
+  // reasoning in `reasoning_content`, which cue already ignores.
+  dahl: 'zai-org/GLM-5.3-Flash',
+  // OpenRouter routes by full model id. Gemini 3 Flash reads screenshots and
+  // Claude Sonnet 5 is the stronger, slower tier.
+  openrouter: 'google/gemini-3.8-flash',
   publik: publik.DEFAULT_MODELS.fast
 };
 const CEREBRAS_BASE_URL = 'https://api.cerebras.ai/v1';
+const DAHL_BASE_URL = 'https://inference.dahl.global/v1';
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+// Every model Dahl currently serves is a reasoning model, and its thinking
+// counts inside max_tokens. Add room so a short visible answer is not starved
+// by the reasoning pass (the same reason publik and Gemini get headroom).
+const DAHL_THINKING_HEADROOM = { fast: 1536, smart: 3072 };
 
 // Gemini model ids that Google has since deprecated/retired (the 2.5 family
 // went "no longer available to new users" in Sep 2026). A settings file saved
@@ -80,7 +93,7 @@ const DEAD_DEEPSEEK_MODEL_RE = /^deepseek-(chat|reasoner)$/i;
 const CURRENT_DEEPSEEK_FAST_DEFAULT = 'deepseek-flash';
 const CURRENT_DEEPSEEK_SMART_DEFAULT = 'deepseek-v4-pro';
 
-const PROVIDER_LABELS = { azure: 'Azure AI Foundry', cerebras: 'Cerebras', openai: 'OpenAI', minimax: 'MiniMax', publik: publik.PROVIDER_LABEL, deepseek: 'DeepSeek' };
+const PROVIDER_LABELS = { azure: 'Azure AI Foundry', cerebras: 'Cerebras', openai: 'OpenAI', minimax: 'MiniMax', publik: publik.PROVIDER_LABEL, deepseek: 'DeepSeek', dahl: 'Dahl', openrouter: 'OpenRouter' };
 
 // DeepSeek is OpenAI-compatible and reuses the OpenAI screenshot/streaming path via baseURL.
 const DEEPSEEK_BASE_URL = 'https://api.deepseek.com';
@@ -448,6 +461,68 @@ function refusalFilter(refusals = REFUSALS) {
   };
 }
 
+// Some OpenAI-compatible hosts (Dahl's MiniMax tier is one) put the model's
+// raw reasoning inline in `content` as <think>…</think> instead of a separate
+// reasoning field. cue must not show or persist that. This is a streaming
+// filter: it buffers only a possible partial tag, lets ordinary text through
+// immediately, and drops everything between <think> and </think>.
+function inlineThinkFilter() {
+  const OPEN = '<think';
+  const CLOSE = '</think';
+  let buffer = '';
+  let inThink = false;
+  return {
+    push(chunk) {
+      buffer += chunk;
+      let out = '';
+      for (;;) {
+        if (inThink) {
+          const end = buffer.toLowerCase().indexOf(CLOSE);
+          if (end === -1) {
+            // Keep only a suffix that could be the start of </think>.
+            buffer = buffer.slice(Math.max(0, buffer.length - (CLOSE.length - 1)));
+            break;
+          }
+          const gt = buffer.indexOf('>', end);
+          if (gt === -1) break;
+          buffer = buffer.slice(gt + 1);
+          inThink = false;
+          continue;
+        }
+        const lower = buffer.toLowerCase();
+        const start = lower.indexOf(OPEN);
+        if (start === -1) {
+          // A trailing "<thi" might become <think> in the next chunk.
+          const lt = buffer.lastIndexOf('<');
+          if (lt !== -1 && buffer.length - lt < OPEN.length && OPEN.startsWith(lower.slice(lt))) {
+            out += buffer.slice(0, lt);
+            buffer = buffer.slice(lt);
+          } else {
+            out += buffer;
+            buffer = '';
+          }
+          break;
+        }
+        out += buffer.slice(0, start);
+        const gt = buffer.indexOf('>', start);
+        if (gt === -1) {
+          buffer = buffer.slice(start);
+          break;
+        }
+        buffer = buffer.slice(gt + 1);
+        inThink = true;
+      }
+      return out;
+    },
+    end() {
+      const rest = inThink ? '' : buffer;
+      buffer = '';
+      inThink = false;
+      return rest;
+    }
+  };
+}
+
 // The visible answer of one stream: every piece goes through the refusal
 // filter, and only what passes reaches onToken. finish() takes the stream's
 // stop reason (and evidence that it was cut short) and returns the shown
@@ -531,7 +606,7 @@ function doneWatcher() {
   return { seen, fetch: watchedFetch };
 }
 
-async function streamOpenAI({ apiKey, baseURL, model, system, turns, imageDataUrl, maxTokens, onToken, onActivity, onResponse, lengthCut, signal, watchDone }) {
+async function streamOpenAI({ apiKey, baseURL, model, system, turns, imageDataUrl, maxTokens, onToken, onActivity, onResponse, lengthCut, signal, watchDone, stripThinkTags }) {
   const OpenAI = require('openai');
   const watcher = watchDone ? doneWatcher() : null;
   const client = new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}), ...(watcher ? { fetch: watcher.fetch } : {}) });
@@ -563,11 +638,16 @@ async function streamOpenAI({ apiKey, baseURL, model, system, turns, imageDataUr
     stream = await pending;
   }
   const answer = answerText(onToken);
+  const think = stripThinkTags ? inlineThinkFilter() : null;
   let finish = '';
   for await (const part of stream) {
     const chunk = readChunk(part, onActivity);
-    if (chunk.text) answer.add(chunk.text);
+    if (chunk.text) answer.add(think ? think.push(chunk.text) : chunk.text);
     if (chunk.finish) finish = chunk.finish;
+  }
+  if (think) {
+    const tail = think.end();
+    if (tail) answer.add(tail);
   }
   const cutShort = !!(signal && signal.aborted) || !!(watcher && !watcher.seen.done);
   return settleAnswer(answer.finish(finish, { cutShort }), onToken, lengthCut);
@@ -868,6 +948,12 @@ function createLLM(settings) {
     missingKey = true;
   }
 
+  // Fixed, first-class OpenAI-compatible endpoints. Their base URL is not
+  // user-editable (that is the Custom provider's job), so a typo cannot send
+  // a key to the wrong host.
+  if (provider === 'dahl') baseURL = DAHL_BASE_URL;
+  if (provider === 'openrouter') baseURL = OPENROUTER_BASE_URL;
+
   // Azure needs a second credential: the resource endpoint.
   if (!configurationError && provider === 'azure' && !endpoint) {
     configurationError = 'Add your Azure AI Foundry endpoint in Settings.';
@@ -890,6 +976,12 @@ function createLLM(settings) {
     providerName: normalizeProviderName(provider),
     async stream(params) {
       if (!ready) throw new Error(configurationError || `Complete the ${provider} provider settings.`);
+      // Dahl serves text-only models (its docs reject image_url content parts
+      // with 400). Refuse before spending a request rather than showing a raw
+      // provider error after the screenshot was already captured.
+      if (provider === 'dahl' && params && params.imageDataUrl) {
+        throw new Error('Dahl models are text-only and cannot read screenshots. Turn screen help off, or switch to OpenAI, Gemini, Anthropic or OpenRouter for a screenshot question.');
+      }
       const useModel = params && params.imageDataUrl ? visionModel : model;
       const args = { apiKey, baseURL, endpoint, model: useModel, maxTokens, thinking: !!settings.smart, ...params, turns: sanitizeTurns(params.turns) };
       // An explicit maxTokens: undefined (or any non-number) falls back to the
@@ -899,6 +991,9 @@ function createLLM(settings) {
       if (provider === PUBLIK_PROVIDER) {
         args.maxTokens = publikOutputCap(visibleTokens, useModel);
         args.watchDone = true;
+      } else if (provider === 'dahl') {
+        // Own key, but a reasoning model: give thinking its own budget.
+        args.maxTokens = visibleTokens + DAHL_THINKING_HEADROOM[settings.smart ? 'smart' : 'fast'];
       } else {
         // Own keys: the request carries no publik-only fields.
         delete args.watchDone;
@@ -941,6 +1036,8 @@ function streamWith(provider, args, minimaxRegion) {
   if (provider === 'cerebras') return streamOpenAI({ ...args, baseURL: CEREBRAS_BASE_URL });
   if (provider === 'minimax') return streamOpenAI({ ...args, baseURL: MINIMAX_BASE_URLS[minimaxRegion] || MINIMAX_BASE_URLS.global_en });
   if (provider === 'deepseek') return streamOpenAI({ ...args, baseURL: DEEPSEEK_BASE_URL });
+  if (provider === 'dahl') return streamOpenAI({ ...args, stripThinkTags: true });
+  if (provider === 'openrouter') return streamOpenAI(args);
   if (provider === 'anthropic') return streamAnthropic(args);
   if (provider === 'gemini') return streamGemini(args);
   if (provider === 'azure') return streamAzure(args);
@@ -974,6 +1071,7 @@ module.exports = {
   isQuotaError,
   isNotFoundError,
   geminiGenerationConfig,
+  inlineThinkFilter,
   publikOutputCap,
   PUBLIK_THINKING_HEADROOM,
   LENGTH_EMPTY_MESSAGE,

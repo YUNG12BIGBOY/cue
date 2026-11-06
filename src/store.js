@@ -32,7 +32,7 @@ const DEFAULTS = {
   meetingAudio: process.platform !== 'darwin',
   baseUrl: '',
   minimaxRegion: 'global_en',
-  apiKeys: { cerebras: '', openai: '', anthropic: '', gemini: '', deepgram: '', custom: '', ollama: '', groq: '', minimax: '', deepseek: '', azure: '', publik: '' },
+  apiKeys: { cerebras: '', openai: '', anthropic: '', gemini: '', deepgram: '', custom: '', ollama: '', groq: '', minimax: '', deepseek: '', azure: '', dahl: '', openrouter: '', publik: '' },
   azureEndpoint: '',
   // publik API (packaged-build default). apiKeys.publik holds the minted key;
   // everything here is state the main process owns — the renderer only reads
@@ -73,6 +73,16 @@ const DEFAULTS = {
   aiRules: '',
   // Overlay opacity (1 = fully opaque). Clamped so the window never vanishes.
   opacity: 1,
+  // Chat text appearance (Settings → Appearance). Size is a percentage of the
+  // built-in 20px answer text so a future base-font change scales with it;
+  // weight is the CSS font-weight used for cue's answers. Both are clamped in
+  // setSettings so a hand-edited file cannot make the overlay unreadable.
+  chatTextSize: 100,
+  chatTextWeight: 400,
+  // How the answer area follows new text: off (never move), a pixels-per-second
+  // speed, or instant (the old jump-to-end behaviour). See the renderer's
+  // AUTO_SCROLL_PX_PER_SEC for the actual speeds.
+  autoScrollSpeed: 'normal',
   // Slides: opt-in auto slide tracking (memory-only, forwarded, never written to disk).
   slides: {
     enabled: false,
@@ -111,6 +121,11 @@ const DEFAULTS = {
     // (non-thinking) and deepseek-v4-pro (thinking) are the current aliases.
     deepseek: { fast: 'deepseek-flash', smart: 'deepseek-v4-pro' },
     azure: { fast: 'gpt-4o-mini', smart: 'gpt-4o' },
+    // Dahl: live IDs from GET https://inference.dahl.global/v1/models
+    // (verified 2026-11-06). Text only — no screenshots, no transcription.
+    dahl: { fast: 'zai-org/GLM-5.3-Flash', smart: 'deepseek-ai/DeepSeek-V4-Flash-0731' },
+    // OpenRouter uses full upstream ids. Both defaults accept images.
+    openrouter: { fast: 'google/gemini-3.8-flash', smart: 'anthropic/claude-sonnet-5.5' },
     // Tier aliases, never upstream slugs; the provisioning response overrides them.
     publik: { fast: 'publik-fast', smart: 'publik-balanced' }
   }
@@ -125,6 +140,32 @@ function clampOpacity(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return 1;
   return Math.min(MAX_OPACITY, Math.max(MIN_OPACITY, Math.round(n * 100) / 100));
+}
+
+const MIN_CHAT_TEXT_SIZE = 70;
+const MAX_CHAT_TEXT_SIZE = 180;
+const MIN_CHAT_TEXT_WEIGHT = 200;
+const MAX_CHAT_TEXT_WEIGHT = 900;
+
+function clampChatTextSize(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 100;
+  return Math.min(MAX_CHAT_TEXT_SIZE, Math.max(MIN_CHAT_TEXT_SIZE, Math.round(n)));
+}
+
+function clampChatTextWeight(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 400;
+  // Slider steps are 100; snapping keeps a typed or hand-edited value on a
+  // weight the OS actually has instead of synthesising an odd in-between.
+  const snapped = Math.round(n / 100) * 100;
+  return Math.min(MAX_CHAT_TEXT_WEIGHT, Math.max(MIN_CHAT_TEXT_WEIGHT, snapped));
+}
+
+const AUTO_SCROLL_SPEEDS = ['off', 'slow', 'normal', 'fast', 'instant'];
+
+function clampAutoScrollSpeed(value) {
+  return AUTO_SCROLL_SPEEDS.includes(value) ? value : 'normal';
 }
 
 const RENDERER_READ_ONLY = ['publik'];
@@ -211,6 +252,14 @@ module.exports = {
   MIN_OPACITY,
   MAX_OPACITY,
   clampOpacity,
+  MIN_CHAT_TEXT_SIZE,
+  MAX_CHAT_TEXT_SIZE,
+  MIN_CHAT_TEXT_WEIGHT,
+  MAX_CHAT_TEXT_WEIGHT,
+  clampChatTextSize,
+  clampChatTextWeight,
+  AUTO_SCROLL_SPEEDS,
+  clampAutoScrollSpeed,
   RENDERER_READ_ONLY,
   applyPublikDefault,
   stripRendererPatch,
@@ -232,6 +281,9 @@ module.exports = {
     const nextSettings = deepMerge(data, patch || {});
     nextSettings.baseUrl = normalizeBaseUrl(nextSettings.baseUrl);
     nextSettings.opacity = clampOpacity(nextSettings.opacity);
+    nextSettings.chatTextSize = clampChatTextSize(nextSettings.chatTextSize);
+    nextSettings.chatTextWeight = clampChatTextWeight(nextSettings.chatTextWeight);
+    nextSettings.autoScrollSpeed = clampAutoScrollSpeed(nextSettings.autoScrollSpeed);
     data = nextSettings;
     save();
     return data;

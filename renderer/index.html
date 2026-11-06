@@ -76,6 +76,7 @@
               <div id="composer-bottom">
                 <button id="smart-toggle" class="smart-pill"><span class="ic"></span><span>Smart</span></button>
                 <button id="history-btn" class="history-btn" title="Show everything said this session"><span class="ic"></span><span>Transcription history</span></button>
+                <button id="clear-chat-btn" class="history-btn clear-chat-btn" title="Clear the conversation" aria-label="Clear the conversation"><span class="ic"></span><span>Clear chat</span></button>
                 <button id="more-btn" class="more-btn" title="Settings"></button>
                 <div class="spacer"></div>
                 <button id="send-btn" title="Send"></button>
@@ -159,11 +160,13 @@
               <button data-provider="openai">OpenAI</button>
               <button data-provider="anthropic">Anthropic</button>
               <button data-provider="gemini">Gemini</button>
+              <button data-provider="openrouter">OpenRouter</button>
               <button data-provider="groq">Groq</button>
               <button data-provider="custom">Custom</button>
               <button data-provider="ollama">Ollama</button>
               <button data-provider="minimax">MiniMax</button>
               <button data-provider="deepseek">DeepSeek</button>
+              <button data-provider="dahl">Dahl</button>
               <button data-provider="azure">Azure AI</button>
             </div>
 
@@ -193,6 +196,8 @@
 
             <div class="s-field" data-key-for="ollama"><span>Ollama URL</span><input id="key-ollama" type="text" placeholder="http://localhost:11434" autocomplete="off" /></div>
             <div class="s-field" data-key-for="deepseek"><span>DeepSeek</span><input id="key-deepseek" type="password" placeholder="sk-..." autocomplete="off" /></div>
+            <div class="s-field" data-key-for="openrouter"><span>OpenRouter</span><input id="key-openrouter" type="password" placeholder="sk-or-v1-..." autocomplete="off" /></div>
+            <div class="s-field" data-key-for="dahl"><span>Dahl <span class="s-hint">chat only · text</span></span><input id="key-dahl" type="password" placeholder="dahl_..." autocomplete="off" /></div>
             <div class="s-field" data-key-for="azure"><span>Azure AI Foundry</span><input id="key-azure" type="password" placeholder="azure key or Entra token" autocomplete="off" /></div>
 
             <div id="azure-endpoint-settings" class="hidden">
@@ -290,6 +295,29 @@
           <input type="range" id="s-opacity-slider" min="20" max="100" step="1" value="100" />
           <span id="s-opacity-value">100%</span>
         </div>
+
+        <label class="s-label">Chat text <span class="s-hint">your messages and cue's answers</span></label>
+        <div class="s-slider-row">
+          <label for="s-chat-size">Size</label>
+          <input type="range" id="s-chat-size" min="70" max="180" step="5" value="100" />
+          <span id="s-chat-size-value">100%</span>
+        </div>
+        <div class="s-slider-row">
+          <label for="s-chat-weight">Boldness</label>
+          <input type="range" id="s-chat-weight" min="200" max="900" step="100" value="400" />
+          <span id="s-chat-weight-value">Normal</span>
+        </div>
+        <div class="s-note">Size scales both bubbles; boldness follows cue's answers and keeps your own messages one step heavier. Changes apply immediately.</div>
+
+        <label class="s-label">Chat auto-scroll <span class="s-hint">how quickly the answer area follows new text</span></label>
+        <div class="s-seg" id="autoscroll-seg">
+          <button data-speed="off">Off</button>
+          <button data-speed="slow">Slow</button>
+          <button data-speed="normal">Normal</button>
+          <button data-speed="fast">Fast</button>
+          <button data-speed="instant">Instant</button>
+        </div>
+        <div class="s-note">Slow, Normal and Fast glide to the newest line at different speeds. Instant jumps. Off never moves the conversation for you. Scrolling up always pauses following until you return to the bottom.</div>
       </div>
 
 

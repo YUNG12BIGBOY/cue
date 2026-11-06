@@ -239,7 +239,8 @@ function saveHarness({ provider, keysAtOpen, typed }) {
   const ctx = vm.createContext({
     $, settings, keysAtOpen: { ...keysAtOpen, publik: '' }, publikState: null,
     cue: { settingsSet: async (s) => s },
-    clampOpacity: (v) => v, statusText: () => '', updateSmartTooltip: () => {}, renderSetupCta: () => {}
+    clampOpacity: (v) => v, clampChatSize: (v) => v, clampChatWeight: (v) => v,
+    statusText: () => '', updateSmartTooltip: () => {}, renderSetupCta: () => {}
   });
   vm.runInContext(`${fnSrc('saveSettings')}\nthis.run = saveSettings;`, ctx);
   return ctx;

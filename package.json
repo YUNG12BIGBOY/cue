@@ -8,9 +8,9 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test test/*.test.js",
-    "postinstall": "node scripts/rename-electron.js",
     "prepare:whisper": "node scripts/prepare-whisper-runtime.js",
     "verify:whisper-runtime": "node scripts/verify-whisper-runtime.js",
+    "icon:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-cue-icon.ps1",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --mac zip --x64 --arm64",
     "dist:mac": "electron-builder --mac zip --x64 --arm64",

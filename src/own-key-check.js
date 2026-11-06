@@ -13,6 +13,11 @@ const CHECKS = {
   groq: (key) => ({ url: 'https://api.groq.com/openai/v1/models', headers: { Authorization: `Bearer ${key}` } }),
   deepseek: (key) => ({ url: 'https://api.deepseek.com/models', headers: { Authorization: `Bearer ${key}` } }),
   cerebras: (key) => ({ url: 'https://api.cerebras.ai/v1/models', headers: { Authorization: `Bearer ${key}` } }),
+  // /v1/models is public on both, so it cannot validate a key. Dahl exposes
+  // the key's token balance and OpenRouter a key-info endpoint; both 401 a
+  // key they do not know.
+  dahl: (key) => ({ url: 'https://inference.dahl.global/tokens/current', headers: { Authorization: `Bearer ${key}` } }),
+  openrouter: (key) => ({ url: 'https://openrouter.ai/api/v1/key', headers: { Authorization: `Bearer ${key}` } }),
   anthropic: (key) => ({ url: 'https://api.anthropic.com/v1/models', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' } }),
   // The key goes in a header, never in the URL.
   gemini: (key) => ({ url: 'https://generativelanguage.googleapis.com/v1beta/models', headers: { 'x-goog-api-key': key } })

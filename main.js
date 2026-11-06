@@ -271,6 +271,37 @@ function saveWindowPosition() {
   store.setSettings({ windowX: x + SIDE_W, windowY: y });
 }
 
+// Windows has no per-window "screen-saver" level: setAlwaysOnTop maps to
+// HWND_TOPMOST. A second topmost window (or any app that re-applies its own
+// topmost flag when it gains focus) can still land above cue, and Windows has
+// no equivalent of setVisibleOnAllWorkspaces. Re-asserting the flag and the
+// z-order on a short timer is the reliable "always overlaid" behaviour people
+// expect from a copilot. moveTop() changes z-order only, never focus, so the
+// app underneath stays usable.
+const KEEP_ON_TOP_MS = 1500;
+let keepOnTopTimer = null;
+
+function holdOverlayOnTop() {
+  if (!win || win.isDestroyed() || !win.isVisible()) return;
+  try {
+    win.setAlwaysOnTop(true, 'screen-saver', 1);
+    win.moveTop();
+  } catch { /* a closing window can throw; the next tick is harmless */ }
+}
+
+function startHoldingOverlayOnTop() {
+  if (keepOnTopTimer) return;
+  keepOnTopTimer = setInterval(holdOverlayOnTop, KEEP_ON_TOP_MS);
+  // Never keep the process alive just for this timer.
+  if (typeof keepOnTopTimer.unref === 'function') keepOnTopTimer.unref();
+}
+
+function stopHoldingOverlayOnTop() {
+  if (!keepOnTopTimer) return;
+  clearInterval(keepOnTopTimer);
+  keepOnTopTimer = null;
+}
+
 function createWindow() {
   const { workArea } = screen.getPrimaryDisplay();
   const W = SIDE_W + MAIN_W + SIDE_W, H = 600;
@@ -349,6 +380,17 @@ function createWindow() {
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   if (isMac && typeof win.setHiddenInMissionControl === 'function') win.setHiddenInMissionControl(true);
 
+  // Keep it above everything, including apps that fight for topmost themselves.
+  holdOverlayOnTop();
+  startHoldingOverlayOnTop();
+  win.on('show', holdOverlayOnTop);
+  win.on('restore', holdOverlayOnTop);
+  win.on('focus', holdOverlayOnTop);
+  // When another app takes focus, Windows may activate it above cue. Re-assert
+  // on the next tick so the overlay stays visible without stealing the focus back.
+  win.on('blur', () => setTimeout(holdOverlayOnTop, 80));
+  win.on('closed', stopHoldingOverlayOnTop);
+
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
   let moveSaveTimer = null;
@@ -357,11 +399,12 @@ function createWindow() {
     moveSaveTimer = setTimeout(saveWindowPosition, 500);
   });
 
-  win.setTitle('Microsoft Edge Update'); // set before load
+  win.setTitle('cue'); // set before load
 
   win.webContents.on('did-finish-load', () => {
     win.showInactive();
-    win.setTitle('Microsoft Edge Update');
+    holdOverlayOnTop();
+    win.setTitle('cue');
     if (restoredTurns.length) {
       // A meeting was in progress when cue last exited: put its transcript back
       // in the sidebar so Recap / Follow-up pick up where the conversation was.
@@ -1792,9 +1835,9 @@ function launchApp() {
 
 // -------- lifecycle --------
 app.whenReady().then(async () => {
-  app.setName('MicrosoftEdgeUpdate');
+  app.setName('cue');
   if (isWindows) {
-    process.title = 'MicrosoftEdgeUpdate';
+    process.title = 'cue';
   }
 
   if (isMac) {

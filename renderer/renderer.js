@@ -25,6 +25,8 @@
   $('#send-btn').innerHTML = icon('play', { size: 15 });
   const clearIC = document.querySelector('#clear-transcript-btn .ic');
   if (clearIC) clearIC.innerHTML = icon('trash-2', { size: 15 });
+  const clearChatIC = document.querySelector('#clear-chat-btn .ic');
+  if (clearChatIC) clearChatIC.innerHTML = icon('trash-2', { size: 14 });
 
   function setSessionButton(active) {
     const btn = $('#stop-btn');
@@ -52,6 +54,10 @@
   let caretEl = null;
   let responseCount = 0;
   const MAX_RESPONSES = 20;
+  // Set by Clear chat while an answer is still streaming: its late tokens are
+  // ignored so the cleared panel stays empty. runMode() resets it for the next
+  // question, and llm:done still releases the busy state.
+  let suppressAnswers = false;
 
   const messages = $('#messages');
 
@@ -82,6 +88,16 @@
   }
 
   function clearMessages() { messages.innerHTML = ''; aiEl = null; caretEl = null; }
+
+  // Clear every question and answer in the conversation. The transcript
+  // history and the input box are separate and stay untouched.
+  function clearChat() {
+    suppressAnswers = true;
+    clearMessages();
+    responseCount = 0;
+    followAnswer = false;
+    showToast('Chat cleared.', 2000);
+  }
 
   function addUserBubble(text) {
     const b = document.createElement('div');
@@ -153,31 +169,76 @@
   // trackpad) stops following, and a scroll back to the end starts it again.
   // cue's own scrolls are told apart by the position they set. llm:start
   // turns following on.
+  //
+  // Settings → Appearance picks the speed. Slow/Normal/Fast move a fixed
+  // number of pixels per second in requestAnimationFrame steps; Instant keeps
+  // the original jump straight to the end; Off never moves the view.
   let followAnswer = false;
   let followFrame = 0;
+  let followLastTs = 0;
   let ownScrollTop = -1;
+  let autoScrollSpeed = 'normal';
   const FOLLOW_SLACK_PX = 40;
+  const AUTO_SCROLL_PX_PER_SEC = { slow: 220, normal: 600, fast: 1400 };
+
   function atAnswerEnd() {
     return messages.scrollHeight - messages.scrollTop - messages.clientHeight <= FOLLOW_SLACK_PX;
   }
+
   function scrollMessagesToEnd() {
     const end = Math.max(0, messages.scrollHeight - messages.clientHeight);
     ownScrollTop = end;
     messages.scrollTop = end;
     ownScrollTop = messages.scrollTop; // what the browser kept (it can round)
   }
-  function scrollAnswerToEnd() {
-    if (!followAnswer || followFrame) return;
-    // One scroll per frame, after the DOM has the new text.
-    followFrame = requestAnimationFrame(() => {
-      followFrame = 0;
-      if (followAnswer) scrollMessagesToEnd();
-    });
+
+  function followStep(ts) {
+    followFrame = 0;
+    if (!followAnswer || autoScrollSpeed === 'off' || autoScrollSpeed === 'instant') return;
+    const target = Math.max(0, messages.scrollHeight - messages.clientHeight);
+    if (target - messages.scrollTop <= 0.5) { ownScrollTop = messages.scrollTop; return; }
+    // rAF hands us a high-resolution timestamp in Electron. The test harness
+    // and a first frame without one get a nominal 16 ms step.
+    const now = typeof ts === 'number' && Number.isFinite(ts) ? ts : followLastTs + 16;
+    const dt = followLastTs ? Math.min(100, Math.max(1, now - followLastTs)) : 16;
+    followLastTs = now;
+    const speed = AUTO_SCROLL_PX_PER_SEC[autoScrollSpeed] || AUTO_SCROLL_PX_PER_SEC.normal;
+    const step = speed * dt / 1000;
+    const next = Math.min(target, messages.scrollTop + step);
+    ownScrollTop = next;
+    messages.scrollTop = next;
+    ownScrollTop = messages.scrollTop; // what the browser kept (it can round)
+    if (target - messages.scrollTop > 0.5) followFrame = requestAnimationFrame(followStep);
   }
+
+  function scrollAnswerToEnd() {
+    if (!followAnswer || autoScrollSpeed === 'off') return;
+    if (autoScrollSpeed === 'instant') { scrollMessagesToEnd(); return; }
+    if (followFrame) return;
+    followLastTs = 0; // start the speed clock on the first frame after a pause
+    followFrame = requestAnimationFrame(followStep);
+  }
+
+  // Settings → Appearance. Persisted immediately; the next token follows at the
+  // new speed. Turning it off also drops the current follow.
+  const AUTO_SCROLL_SPEEDS = ['off', 'slow', 'normal', 'fast', 'instant'];
+  function applyAutoScrollSpeed(value, persist) {
+    autoScrollSpeed = AUTO_SCROLL_SPEEDS.includes(value) ? value : 'normal';
+    if (settings) settings.autoScrollSpeed = autoScrollSpeed;
+    document.querySelectorAll('#autoscroll-seg button').forEach((button) => {
+      button.classList.toggle('on', button.dataset.speed === autoScrollSpeed);
+    });
+    if (autoScrollSpeed === 'off') followAnswer = false;
+    else if (!followAnswer && atAnswerEnd()) followAnswer = true;
+    if (persist) {
+      cue.settingsSet({ autoScrollSpeed }).then((next) => { if (next) settings = next; }).catch(() => {});
+    }
+  }
+
   messages.addEventListener('scroll', () => {
     if (Math.abs(messages.scrollTop - ownScrollTop) <= 2) return; // cue's own scroll
     ownScrollTop = -1;
-    followAnswer = atAnswerEnd();
+    followAnswer = autoScrollSpeed !== 'off' && atAnswerEnd();
   }, { passive: true });
 
   let busyFailsafe = null;
@@ -241,6 +302,7 @@
   // ---- actions -----------------------------------------------------------
   function runMode(mode, text) {
     if (busy) return;
+    suppressAnswers = false; // a new question owns the panel again
     setBusy(true);
     cue.ask({ mode, text: text || '' });
   }
@@ -670,6 +732,59 @@
     if (sVal) sVal.textContent = percent + '%';
     if (persist) persistOpacitySoon();
   }
+  // Chat text appearance, live: CSS variables on :root, persisted with the
+  // same debounce as opacity so dragging a slider does not write forty files.
+  const CHAT_SIZE_MIN = 70;
+  const CHAT_SIZE_MAX = 180;
+  const CHAT_WEIGHT_MIN = 200;
+  const CHAT_WEIGHT_MAX = 900;
+  const CHAT_WEIGHT_NAMES = {
+    200: 'Extra light', 300: 'Light', 400: 'Normal', 500: 'Medium',
+    600: 'Semibold', 700: 'Bold', 800: 'Extra bold', 900: 'Heavy'
+  };
+  function clampChatSize(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 100;
+    return Math.min(CHAT_SIZE_MAX, Math.max(CHAT_SIZE_MIN, Math.round(n)));
+  }
+  function clampChatWeight(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return 400;
+    return Math.min(CHAT_WEIGHT_MAX, Math.max(CHAT_WEIGHT_MIN, Math.round(n / 100) * 100));
+  }
+  function persistChatTextSoon() {
+    clearTimeout(persistChatTextSoon.timer);
+    persistChatTextSoon.timer = setTimeout(() => {
+      if (!settings) return;
+      cue.settingsSet({
+        chatTextSize: settings.chatTextSize,
+        chatTextWeight: settings.chatTextWeight
+      }).then((next) => { if (next) settings = next; }).catch(() => {});
+    }, 400);
+  }
+  function applyChatText(size, weight, persist) {
+    const sizePct = clampChatSize(size);
+    const weightValue = clampChatWeight(weight);
+    if (settings) {
+      settings.chatTextSize = sizePct;
+      settings.chatTextWeight = weightValue;
+    }
+    const rootStyle = document.documentElement.style;
+    rootStyle.setProperty('--chat-scale', String(sizePct / 100));
+    rootStyle.setProperty('--chat-weight', String(weightValue));
+    // Your own bubble keeps the original +100 contrast over cue's answer.
+    rootStyle.setProperty('--chat-bubble-weight', String(Math.min(900, weightValue + 100)));
+    const sizeEl = $('#s-chat-size');
+    const sizeVal = $('#s-chat-size-value');
+    const weightEl = $('#s-chat-weight');
+    const weightVal = $('#s-chat-weight-value');
+    if (sizeEl) sizeEl.value = String(sizePct);
+    if (sizeVal) sizeVal.textContent = sizePct + '%';
+    if (weightEl) weightEl.value = String(weightValue);
+    if (weightVal) weightVal.textContent = CHAT_WEIGHT_NAMES[weightValue] || String(weightValue);
+    if (persist) persistChatTextSoon();
+  }
+
   function toggleOpacityPopover(force) {
     const pop = $('#opacity-popover');
     const btn = $('#opacity-btn');
@@ -693,6 +808,20 @@
     if (!el) return;
     el.addEventListener('input', () => applyOpacity(Number(el.value) / 100, true));
     el.addEventListener('change', () => applyOpacity(Number(el.value) / 100, true));
+  });
+  ['s-chat-size', 's-chat-weight'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const update = () => applyChatText(
+      $('#s-chat-size') ? $('#s-chat-size').value : settings.chatTextSize,
+      $('#s-chat-weight') ? $('#s-chat-weight').value : settings.chatTextWeight,
+      true
+    );
+    el.addEventListener('input', update);
+    el.addEventListener('change', update);
+  });
+  document.querySelectorAll('#autoscroll-seg button').forEach((button) => {
+    button.addEventListener('click', () => applyAutoScrollSpeed(button.dataset.speed, true));
   });
 
   // Stop = start/stop listening. Kick off system-audio capture straight from the click so
@@ -1022,6 +1151,9 @@
     historyBtn.addEventListener('click', toggleSidebar);
   }
 
+  const clearChatBtn = document.getElementById('clear-chat-btn');
+  if (clearChatBtn) clearChatBtn.addEventListener('click', clearChat);
+
   // Close sidebar button
   const closeSidebarBtn = document.getElementById('close-sidebar-btn');
   if (closeSidebarBtn) {
@@ -1219,6 +1351,7 @@
     showToast(`Slide ${count} captured · ${title}`, 3000);
   });
   cue.on('llm:start', ({ userBubble, small, category }) => {
+    if (suppressAnswers) return;
     responseCount++;
     if (responseCount > MAX_RESPONSES) {
       const oldest = messages.querySelector('.response-group');
@@ -1251,7 +1384,8 @@
     aiEl.appendChild(caretEl);
     group.appendChild(aiEl);
     messages.appendChild(group);
-    followAnswer = true; // the tokens keep the end of this answer in view
+    // The tokens keep the end of this answer in view unless auto-scroll is off.
+    followAnswer = autoScrollSpeed !== 'off';
     // Scroll #messages directly rather than calling sep.scrollIntoView(): that
     // scrolls *every* scrollable ancestor, and once the panel is tall enough it
     // scrolls the document too, aligning the separator to the top of the window
@@ -1260,19 +1394,25 @@
     // just never come back. The new answer starts at the end of the area (its
     // separator is at the top whenever the area has room), in one step: the
     // steps of a smooth scroll would read as the person scrolling away.
-    scrollMessagesToEnd();
+    if (followAnswer) scrollMessagesToEnd();
     setBusy(true);
   });
   cue.on('llm:thinking', () => {
+    if (suppressAnswers) { onAnswerActivity(); return; }
     showThinking();
     onAnswerActivity(); // a long think is not a lost answer: keep the failsafe away
   });
   cue.on('llm:token', ({ text }) => {
+    if (suppressAnswers) { onAnswerActivity(); return; }
     appendToken(text);
     onAnswerActivity(); // nor is a long answer that is still streaming
   });
-  cue.on('llm:done', () => { finalizeAi(); setBusy(false); });
+  cue.on('llm:done', () => {
+    if (!suppressAnswers) finalizeAi();
+    setBusy(false);
+  });
   cue.on('llm:error', ({ message, action, secondary }) => {
+    if (suppressAnswers) { setBusy(false); return; }
     if (!aiEl) startAi(true);
     aiEl.dataset.raw = message; finalizeAi(); setBusy(false);
     // publik errors carry one action: the renderer's markdown emits no anchors,
@@ -1795,6 +1935,8 @@
     $('#key-ollama').value = settings.apiKeys.ollama || '';
     $('#key-minimax').value = settings.apiKeys.minimax || '';
     $('#key-deepseek').value = settings.apiKeys.deepseek || '';
+    $('#key-openrouter').value = settings.apiKeys.openrouter || '';
+    $('#key-dahl').value = settings.apiKeys.dahl || '';
     document.querySelectorAll('#minimax-region-seg button').forEach((b) => b.classList.toggle('on', b.dataset.region === (settings.minimaxRegion || 'global_en')));
     $('#key-azure').value = settings.apiKeys.azure || '';
     $('#azure-endpoint').value = settings.azureEndpoint || '';
@@ -1829,6 +1971,8 @@
     updateAiRulesCounter();
     // Appearance tab
     applyOpacity(settings.opacity, false);
+    applyChatText(settings.chatTextSize, settings.chatTextWeight, false);
+    applyAutoScrollSpeed(settings.autoScrollSpeed, false);
   }
 
   // Whoever cue has been told it may answer questions for. Empty is the normal
@@ -1869,7 +2013,7 @@
 
   function statusText() {
     const k = settings.apiKeys;
-    const labels = { publik: 'publik', cerebras: 'Cerebras', openai: 'OpenAI', anthropic: 'Anthropic', gemini: 'Gemini', deepgram: 'Deepgram', custom: 'Custom', ollama: 'Ollama', groq: 'Groq', minimax: 'MiniMax', deepseek: 'DeepSeek', azure: 'Azure AI Foundry' };
+    const labels = { publik: 'publik', cerebras: 'Cerebras', openai: 'OpenAI', anthropic: 'Anthropic', gemini: 'Gemini', deepgram: 'Deepgram', custom: 'Custom', ollama: 'Ollama', groq: 'Groq', minimax: 'MiniMax', deepseek: 'DeepSeek', openrouter: 'OpenRouter', dahl: 'Dahl', azure: 'Azure AI Foundry' };
     const has = Object.keys(labels).filter((p) => k[p]).map((p) => labels[p]);
     const publikPart = settings.provider === 'publik' && publikState
       ? ` · ${publikState.connected ? (publikState.balanceLabel ? `balance ${publikState.balanceLabel}` : 'connected') : 'not set up'}`
@@ -2068,6 +2212,8 @@
     settings.apiKeys.ollama = $('#key-ollama').value.trim();
     settings.apiKeys.minimax = $('#key-minimax').value.trim();
     settings.apiKeys.deepseek = $('#key-deepseek').value.trim();
+    settings.apiKeys.openrouter = $('#key-openrouter').value.trim();
+    settings.apiKeys.dahl = $('#key-dahl').value.trim();
     settings.apiKeys.azure = $('#key-azure').value.trim();
     settings.azureEndpoint = $('#azure-endpoint').value.trim();
     if (!settings.models[settings.provider]) settings.models[settings.provider] = {};
@@ -2087,7 +2233,7 @@
     // this visit can move the provider.
     const publikLive = settings.provider === 'publik' && !!(publikState && publikState.connected && !publikState.revoked);
     if (!publikLive && !settings.apiKeys[settings.provider]) {
-      const keyedProviders = ['cerebras', 'openai', 'anthropic', 'gemini', 'groq', 'minimax', 'deepseek', 'azure'];
+      const keyedProviders = ['cerebras', 'openai', 'anthropic', 'gemini', 'groq', 'minimax', 'deepseek', 'openrouter', 'dahl', 'azure'];
       const justFilled = keyedProviders.find((p) => settings.apiKeys[p] && settings.apiKeys[p] !== (keysAtOpen[p] || ''));
       if (justFilled) settings.provider = justFilled;
     }
@@ -2110,6 +2256,10 @@
     // Appearance tab
     const opacitySlider = $('#s-opacity-slider');
     if (opacitySlider) settings.opacity = clampOpacity(Number(opacitySlider.value) / 100);
+    const chatSizeSlider = $('#s-chat-size');
+    const chatWeightSlider = $('#s-chat-weight');
+    if (chatSizeSlider) settings.chatTextSize = clampChatSize(chatSizeSlider.value);
+    if (chatWeightSlider) settings.chatTextWeight = clampChatWeight(chatWeightSlider.value);
     try {
       settings = await cue.settingsSet(settings);
       keysAtOpen = { ...(settings.apiKeys || {}) };
@@ -2481,6 +2631,8 @@
     }
 
     applyOpacity(settings.opacity, false);
+    applyChatText(settings.chatTextSize, settings.chatTextWeight, false);
+    applyAutoScrollSpeed(settings.autoScrollSpeed, false);
 
     const st = await cue.captureState();
     $('#live-dot').classList.toggle('off', !st.active);
