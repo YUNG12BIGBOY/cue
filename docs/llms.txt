@@ -1,0 +1,43 @@
+# cue for Windows
+
+> cue is a free, open-source AI copilot for Windows that floats above every app, reads the screen, and hears meetings. It is a bring-your-own-key alternative to Cluely, with first-class Dahl and OpenRouter support.
+
+## Quick facts
+
+- Platform: Windows 11 and Windows 10 2004 or newer
+- License: GPL-3.0-or-later
+- Price: free; you pay only your AI provider
+- Download: https://github.com/YUNG12BIGBOY/cue/releases/latest/download/cue-win-x64.exe
+- Source: https://github.com/YUNG12BIGBOY/cue
+- Landing page: https://yung12bigboy.github.io/cue/
+- Windows build notes: https://github.com/YUNG12BIGBOY/cue/blob/main/WINDOWS.md
+
+## What it does
+
+cue floats a small glass panel above other windows. It combines three inputs — the screen, the microphone, and system audio from the other side of a meeting — and sends them to the AI provider you configure.
+
+- Smart assist: reads the screen and recent conversation
+- What should I say?: answers from live meeting audio
+- Recap: summarises the whole conversation
+- Ask anything: typed questions with screen context
+- Coding help: screenshot to solution
+- Chat controls: text size, boldness, Clear chat, and five auto-scroll speeds (Off, Slow, Normal, Fast, Instant)
+- Local transcription: whisper.cpp models keep speech-to-text on the machine
+- Always-on-top overlay that stays above other software
+
+## Providers
+
+Dahl, OpenRouter, OpenAI, Anthropic, Google Gemini, Azure AI Foundry, DeepSeek, Groq, Ollama, and any OpenAI-compatible endpoint.
+
+Dahl and OpenRouter use fixed base URLs and ship with fast and smart model defaults. Dahl is chat-only: it does not accept screenshots or audio.
+
+## Install
+
+1. Download cue-win-x64.exe from the latest release.
+2. Run it. The installer is unsigned, so SmartScreen may ask you to choose More info, then Run anyway.
+3. Open Settings with Ctrl+, and add a provider key.
+4. Optionally download a whisper.cpp model in Settings > Audio > Local.
+
+## Responsible use
+
+cue is intended for legitimate uses such as notes, studying, accessibility, and practice. Using a hidden assistant during a proctored exam, job interview, or recorded meeting may break that platform's rules and local consent laws. You are responsible for how you use it.

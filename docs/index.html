@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cue for Windows — open-source AI copilot overlay</title>
+<meta name="description" content="Free, open-source AI copilot for Windows that floats above every app, hears meetings, and works with Dahl, OpenRouter, OpenAI or your own key. Download the installer.">
+<link rel="canonical" href="https://yung12bigboy.github.io/cue/">
+<meta name="theme-color" content="#0b0d10">
+<meta property="og:type" content="website">
+<meta property="og:title" content="cue for Windows — open-source AI copilot overlay">
+<meta property="og:description" content="Floats above every app, hears meetings, and works with Dahl, OpenRouter, OpenAI or your own key. Free and open source.">
+<meta property="og:url" content="https://yung12bigboy.github.io/cue/">
+<meta property="og:image" content="https://yung12bigboy.github.io/cue/overlay-hero.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="cue for Windows — open-source AI copilot overlay">
+<meta name="twitter:description" content="Free, open-source AI copilot for Windows. Dahl, OpenRouter, OpenAI or your own key.">
+<meta name="twitter:image" content="https://yung12bigboy.github.io/cue/overlay-hero.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "cue for Windows",
+      "applicationCategory": "ProductivityApplication",
+      "operatingSystem": "Windows 11, Windows 10 2004+",
+      "description": "Open-source AI copilot that floats above every Windows app, reads the screen, hears meetings, and works with Dahl, OpenRouter, OpenAI, Anthropic, Gemini or any OpenAI-compatible endpoint.",
+      "url": "https://yung12bigboy.github.io/cue/",
+      "downloadUrl": "https://github.com/YUNG12BIGBOY/cue/releases/latest/download/cue-win-x64.exe",
+      "codeRepository": "https://github.com/YUNG12BIGBOY/cue",
+      "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "softwareVersion": "0.2.13",
+      "author": { "@type": "Organization", "name": "cue contributors" }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is cue for Windows?",
+          "acceptedAnswer": { "@type": "Answer", "text": "cue is a free, open-source AI copilot that floats above every Windows app. It can read your screen, hear your microphone and meeting audio, and answer in real time. This fork adds first-class Dahl and OpenRouter support and builds an honest cue.exe." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is cue free?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. cue is GPL-3.0 open source. You only pay your AI provider for the requests you make, or use a local model where supported." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does cue support Dahl and OpenRouter?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. Dahl and OpenRouter are first-class providers with fixed base URLs and sensible fast and smart model defaults. OpenAI, Anthropic, Google Gemini, Azure AI Foundry, DeepSeek, Groq, Ollama and custom OpenAI-compatible endpoints also work." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does cue work on Windows 10?",
+          "acceptedAnswer": { "@type": "Answer", "text": "cue targets Windows 11 and Windows 10 2004 or newer. Screen-share exclusion is best-effort: Windows 10 builds older than 2004 fall back to a black box, and no tool can hide from a phone camera." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is cue a Cluely alternative?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. cue is an open-source, bring-your-own-key alternative to Cluely-style AI overlays, with screen, microphone and system-audio input plus Smart assist, Recap and Ask anything." }
+        },
+        {
+          "@type": "Question",
+          "name": "Where is my data sent?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Only to the AI provider you configure. cue has no telemetry. With the local Whisper option, transcription stays on your computer." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does Windows SmartScreen warn about the installer?",
+          "acceptedAnswer": { "@type": "Answer", "text": "The installer is not code-signed, so Windows shows a SmartScreen warning. Choose More info, then Run anyway. The build is reproducible from the public source." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I use cue in an interview or exam?",
+          "acceptedAnswer": { "@type": "Answer", "text": "cue is intended for legitimate uses such as your own notes, studying, accessibility and practice. A hidden assistant during a proctored exam, job interview or recorded meeting may break that platform's rules and local consent laws. You are responsible for how you use it." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #12161c;
+    --panel-2: #171c24;
+    --line: rgba(255,255,255,.10);
+    --tx: #e9edf2;
+    --tx-2: #a9b3c0;
+    --tx-3: #77818e;
+    --accent: #5b9dff;
+    --accent-2: #8cc4ff;
+    --green: #35d07f;
+    --r: 14px;
+    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--tx); font-family: var(--font);
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { width: min(980px, calc(100% - 40px)); margin: 0 auto; }
+  header { border-bottom: 1px solid var(--line); position: sticky; top: 0; background: rgba(11,13,16,.86); backdrop-filter: blur(10px); z-index: 10; }
+  .nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; color: var(--tx); font-weight: 700; letter-spacing: -.01em; }
+  .brand mark { background: transparent; color: var(--accent); }
+  .logo { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: linear-gradient(135deg, #1e6bff, #8cc4ff); color: #06101f; font-weight: 800; font-size: 15px; }
+  nav.links { display: flex; gap: 18px; font-size: 14px; }
+  nav.links a { color: var(--tx-2); }
+  @media (max-width: 640px) { nav.links { display: none; } }
+  .hero { padding: 72px 0 40px; text-align: center; }
+  .eyebrow { display: inline-block; font-size: 12.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--green); border: 1px solid rgba(53,208,127,.28); background: rgba(53,208,127,.08); border-radius: 999px; padding: 4px 12px; margin-bottom: 18px; }
+  h1 { font-size: clamp(32px, 5.4vw, 56px); line-height: 1.06; letter-spacing: -.035em; margin: 0 0 18px; }
+  h1 .grad { background: linear-gradient(100deg, #fff 10%, #8cc4ff 55%, #5b9dff 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { max-width: 680px; margin: 0 auto 8px; color: var(--tx-2); font-size: clamp(16px, 2.1vw, 19px); }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 28px 0 10px; }
+  .btn { display: inline-flex; align-items: center; gap: 9px; padding: 12px 20px; border-radius: 10px; font-weight: 650; font-size: 15px; border: 1px solid transparent; }
+  .btn-primary { background: linear-gradient(180deg, #6aa8ff, #3c82f6); color: #06101f; box-shadow: 0 8px 26px rgba(60,130,246,.28); }
+  .btn-primary:hover { text-decoration: none; filter: brightness(1.06); }
+  .btn-ghost { border-color: var(--line); background: var(--panel); color: var(--tx); }
+  .btn-ghost:hover { text-decoration: none; background: var(--panel-2); }
+  .fine { font-size: 13px; color: var(--tx-3); }
+  .shot { margin: 36px auto 0; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--panel); box-shadow: 0 30px 80px rgba(0,0,0,.45); }
+  .shot img { display: block; width: 100%; height: auto; }
+  section { padding: 56px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: clamp(24px, 3.4vw, 34px); letter-spacing: -.025em; margin: 0 0 8px; }
+  .sub { color: var(--tx-2); margin: 0 0 28px; max-width: 720px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  @media (max-width: 820px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 15.5px; letter-spacing: -.01em; }
+  .card p { margin: 0; color: var(--tx-2); font-size: 14px; }
+  .ico { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; background: rgba(91,157,255,.12); color: var(--accent-2); margin-bottom: 12px; font-size: 15px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; font-size: 14.5px; }
+  th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  th { color: var(--tx-2); font-weight: 600; font-size: 13px; }
+  tr:last-child td { border-bottom: 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .92em; background: rgba(255,255,255,.06); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+  ol.steps li { counter-increment: step; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px 16px 58px; position: relative; color: var(--tx-2); }
+  ol.steps li::before { content: counter(step); position: absolute; left: 16px; top: 16px; width: 28px; height: 28px; border-radius: 50%; background: rgba(91,157,255,.14); color: var(--accent-2); font-weight: 700; display: grid; place-items: center; font-size: 14px; }
+  ol.steps strong { color: var(--tx); }
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 18px; margin-bottom: 10px; }
+  summary { cursor: pointer; font-weight: 600; color: var(--tx); }
+  details p { color: var(--tx-2); margin: 10px 0 0; font-size: 14.5px; }
+  .note { border-left: 3px solid var(--accent); background: rgba(91,157,255,.07); padding: 14px 18px; border-radius: 0 10px 10px 0; color: var(--tx-2); font-size: 14px; }
+  footer { border-top: 1px solid var(--line); padding: 30px 0 46px; color: var(--tx-3); font-size: 13.5px; }
+  footer .row { display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; }
+  footer a { color: var(--tx-2); }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="./"><span class="logo">c</span> cue <mark>for Windows</mark></a>
+    <nav class="links" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#providers">Providers</a>
+      <a href="#install">Install</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/YUNG12BIGBOY/cue">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap" style="border-top:0">
+    <span class="eyebrow">Free · Open source · Bring your own key</span>
+    <h1>An AI copilot that <span class="grad">floats above every app</span> on Windows</h1>
+    <p class="lede">cue sees your screen, hears your meetings, and answers in real time. This Windows build adds first-class <strong>Dahl</strong> and <strong>OpenRouter</strong> support, chat appearance controls, and selectable auto-scroll speeds.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/YUNG12BIGBOY/cue/releases/latest/download/cue-win-x64.exe">Download for Windows</a>
+      <a class="btn btn-ghost" href="https://github.com/YUNG12BIGBOY/cue">View source on GitHub</a>
+    </div>
+    <p class="fine">Windows 11 and Windows 10 2004+ · GPL-3.0 · Installer is unsigned, so SmartScreen may warn.</p>
+    <div class="shot"><img src="overlay-hero.png" width="1400" height="820" alt="cue floating above a Windows desktop, with a question and an AI answer"></div>
+  </section>
+
+  <section id="features" class="wrap">
+    <h2>One panel, three inputs, real answers</h2>
+    <p class="sub">cue sits on top of your work and combines what is on screen with what is being said.</p>
+    <div class="grid">
+      <div class="card"><div class="ico">◉</div><h3>Always on top</h3><p>A small glass panel that stays above other windows, on every virtual desktop.</p></div>
+      <div class="card"><div class="ico">▣</div><h3>Screen + mic + meeting audio</h3><p>Three separate inputs: your screen, your microphone, and system audio from the other side.</p></div>
+      <div class="card"><div class="ico">✦</div><h3>Smart assist</h3><p>One shortcut reads the screen and recent conversation, then tells you what to do next.</p></div>
+      <div class="card"><div class="ico">⌁</div><h3>What should I say?</h3><p>Answers from the live meeting audio, in the moment, without typing.</p></div>
+      <div class="card"><div class="ico">↻</div><h3>Recap</h3><p>Turns the whole conversation into a short summary you can re-read.</p></div>
+      <div class="card"><div class="ico">⌘</div><h3>Chat controls</h3><p>Text size and boldness, a one-click Clear chat, and five auto-scroll speeds from Off to Instant.</p></div>
+      <div class="card"><div class="ico">⌨</div><h3>Local transcription</h3><p>Download a whisper.cpp model and keep speech-to-text on your own machine.</p></div>
+      <div class="card"><div class="ico">⌂</div><h3>Honest build</h3><p>No Microsoft process masquerading. This fork builds a normal cue.exe with its own icon.</p></div>
+      <div class="card"><div class="ico">∞</div><h3>Free and open</h3><p>GPL-3.0 source. No account, no subscription, no telemetry. You pay only your AI provider.</p></div>
+    </div>
+  </section>
+
+  <section id="providers" class="wrap">
+    <h2>Works with the key you already have</h2>
+    <p class="sub">Dahl and OpenRouter are first-class providers here, alongside the usual OpenAI-compatible endpoints.</p>
+    <table>
+      <thead><tr><th>Provider</th><th>What you get</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Dahl</strong></td><td>Fixed base URL, separate fast and smart models, and inline reasoning blocks stripped from the stream.</td></tr>
+        <tr><td><strong>OpenRouter</strong></td><td>Fixed base URL with sensible fast and smart defaults, so you can switch models without editing config.</td></tr>
+        <tr><td>OpenAI · Anthropic · Google Gemini</td><td>Bring the key you already use. Fast and smart model picks are built in.</td></tr>
+        <tr><td>Azure AI Foundry · DeepSeek · Groq</td><td>First-class options in Settings, including custom deployment names for Azure.</td></tr>
+        <tr><td>Ollama · custom endpoint</td><td>Point cue at any OpenAI-compatible base URL, including a local server.</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Dahl is chat-only in cue: it answers questions but does not accept screenshots or audio. Use a vision-capable provider for Smart assist and a Whisper model or another key for transcription.</p>
+  </section>
+
+  <section id="install" class="wrap">
+    <h2>Install in a few minutes</h2>
+    <p class="sub">Download the installer, add a key, and optionally download a local transcription model.</p>
+    <ol class="steps">
+      <li><strong>Download <code>cue-win-x64.exe</code></strong> from the <a href="https://github.com/YUNG12BIGBOY/cue/releases/latest">latest release</a>.</li>
+      <li><strong>Run it.</strong> If SmartScreen appears, choose <em>More info</em>, then <em>Run anyway</em>. The installer is unsigned.</li>
+      <li><strong>Add your provider key.</strong> Open Settings with <code>Ctrl+,</code>, pick Dahl, OpenRouter, OpenAI, Anthropic, Gemini or another provider, and paste the key.</li>
+      <li><strong>Optional: transcribe locally.</strong> In Settings → Audio → Local, download a whisper.cpp model such as <code>base.en</code>.</li>
+      <li><strong>Use it.</strong> <code>Ctrl+Shift+Enter</code> for Smart assist, <code>Ctrl+Enter</code> for What should I say, or type a question and press Enter.</li>
+    </ol>
+  </section>
+
+  <section id="faq" class="wrap">
+    <h2>Questions</h2>
+    <p class="sub">Short answers to what people ask before installing.</p>
+    <details><summary>What is cue for Windows?</summary><p>cue is a free, open-source AI copilot that floats above every Windows app. It can read your screen, hear your microphone and meeting audio, and answer in real time. This fork adds first-class Dahl and OpenRouter support and builds an honest cue.exe.</p></details>
+    <details><summary>Is cue free?</summary><p>Yes. cue is GPL-3.0 open source. You only pay your AI provider for the requests you make, or use a local model where supported.</p></details>
+    <details><summary>Does cue support Dahl and OpenRouter?</summary><p>Yes. Dahl and OpenRouter are first-class providers with fixed base URLs and sensible fast and smart model defaults. OpenAI, Anthropic, Google Gemini, Azure AI Foundry, DeepSeek, Groq, Ollama and custom OpenAI-compatible endpoints also work.</p></details>
+    <details><summary>Does cue work on Windows 10?</summary><p>cue targets Windows 11 and Windows 10 2004 or newer. Screen-share exclusion is best-effort: Windows 10 builds older than 2004 fall back to a black box, and no tool can hide from a phone camera.</p></details>
+    <details><summary>Is cue a Cluely alternative?</summary><p>Yes. cue is an open-source, bring-your-own-key alternative to Cluely-style AI overlays, with screen, microphone and system-audio input plus Smart assist, Recap and Ask anything.</p></details>
+    <details><summary>Where is my data sent?</summary><p>Only to the AI provider you configure. cue has no telemetry. With the local Whisper option, transcription stays on your computer.</p></details>
+    <details><summary>Why does Windows SmartScreen warn about the installer?</summary><p>The installer is not code-signed, so Windows shows a SmartScreen warning. Choose More info, then Run anyway. The build is reproducible from the public source.</p></details>
+    <details><summary>Can I use cue in an interview or exam?</summary><p>cue is intended for legitimate uses such as your own notes, studying, accessibility and practice. A hidden assistant during a proctored exam, job interview or recorded meeting may break that platform's rules and local consent laws. You are responsible for how you use it.</p></details>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap row">
+    <span>cue for Windows · GPL-3.0-or-later · Based on cue by Blueturboguy07</span>
+    <span>
+      <a href="https://github.com/YUNG12BIGBOY/cue">Source</a> ·
+      <a href="https://github.com/YUNG12BIGBOY/cue/releases">Releases</a> ·
+      <a href="https://github.com/YUNG12BIGBOY/cue/blob/main/WINDOWS.md">Windows notes</a> ·
+      <a href="llms.txt">llms.txt</a>
+    </span>
+  </div>
+</footer>
+</body>
+</html>

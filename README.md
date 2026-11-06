@@ -1,20 +1,22 @@
 <div align="center">
 
-# cue
+# cue for Windows
+
+**An open-source AI copilot that floats above every app on Windows — sees your screen, hears your meetings, and stays out of screen shares (best-effort).**
+
+A free, bring-your-own-key alternative to Cluely, with first-class **Dahl** and **OpenRouter** support. Built for live meetings, coding help, studying, and practice.
+
+[**Download the Windows installer**](https://github.com/YUNG12BIGBOY/cue/releases/latest) · [Landing page](https://yung12bigboy.github.io/cue/) · [Build from source](WINDOWS.md)
+
+<img src="docs/overlay-hero.png" width="620" alt="cue floating above the Windows desktop" />
+
+</div>
 
 > **Local Windows fork.** This copy removes upstream's process masquerading
 > (renaming Electron to `MicrosoftEdgeUpdate.exe`, copying Microsoft's icon and
 > forging Microsoft PE metadata). It builds as an honest `cue.exe` with its own
 > icon and normal Task Manager entry. See [WINDOWS.md](WINDOWS.md) for the
 > changes, build steps and output paths.
-
-**An open-source AI copilot that floats over your screen — sees what you see, hears your meetings, and stays hidden from screen shares.**
-
-A free, self-hosted alternative to Cluely. Bring your own AI key (OpenAI · Anthropic · Google Gemini · Azure AI Foundry . OpenAI-compatible endpoints).
-
-<img src="docs/tutorial.png" width="620" alt="cue first-run tutorial" />
-
-</div>
 
 ---
 
